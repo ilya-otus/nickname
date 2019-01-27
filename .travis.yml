@@ -1,0 +1,30 @@
+language: cpp
+compiler: g++-8
+before_script:
+- sudo apt-get install libboost-test-dev -y
+- echo "deb http://archive.ubuntu.com/ubuntu xenial main universe" | sudo tee -a /etc/apt/sources.list.d/xenial.list
+- sudo apt-get update
+- sudo apt-get install libspdlog-dev -y
+- sudo apt-get -y install software-properties-common
+- sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
+- sudo apt-get update
+- sudo apt-get install -y g++-8
+- sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90
+- sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 90
+
+env:
+    global:
+    - MAJOR_VERSION=0
+    - MINOR_VERSION=0
+    - PACKAGE_FULL_VERSION=${MAJOR_VERSION}.${MINOR_VERSION}.${TRAVIS_BUILD_NUMBER}
+    - PACKAGE_NAME=nickname-${PACKAGE_FULL_VERSION}-Linux.deb
+script:
+- cmake .
+- cmake --build .
+- cmake --build . --target test
+- cmake --build . --target package
+deploy:
+    provider: script
+    skip_cleanup: true
+    script:
+            - curl -T ${PACKAGE_NAME} -u${USER}:${BINTRAY_API_KEY} "https://api.bintray.com/content/${USER}/${REPO_PATH}/${TRAVIS_BUILD_NUMBER}/${PACKAGE_NAME};deb_distribution=trusty;deb_component=main;deb_architecture=amd64;publish=1"

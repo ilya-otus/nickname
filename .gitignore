@@ -1,0 +1,12 @@
+*
+!.gitignore
+!.travis.yml
+!README.md
+!/*.cpp
+!/*.h
+!/*.h.in
+!/*.hpp
+!/src/
+!/tests/
+!CMakeLists.txt
+version.h
