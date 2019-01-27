@@ -1,10 +1,31 @@
 #pragma once
-#include <cassert>
+#include <stdexcept>
 #include <map>
 #include <functional>
 #include "radix_helpers.h"
 
 namespace Patricia {
+
+template <typename K, typename V, class C> class RadixNode;
+
+template <typename K, typename V, typename C>
+RadixNode<K, V, C>* ascend(RadixNode<K, V, C> *node);
+
+template <typename K, typename V, typename C>
+RadixNode<K, V, C>* descend(RadixNode<K, V, C> *node);
+
+template <typename K, typename V, class C>
+RadixNode<K, V, C>* begin(RadixNode<K, V, C> *node);
+
+template <typename K, typename V, class C>
+RadixNode<K, V, C>* findNode(const K &key, RadixNode<K, V, C> *node, size_t depth);
+
+template <typename K, typename V, class C>
+RadixNode<K, V, C>* append(RadixNode<K, V, C> *node, const typename RadixNode<K, V, C>::value_type &value);
+
+template <typename K, typename V, class C>
+RadixNode<K, V, C>* prepend(RadixNode<K, V, C> *node, const typename RadixNode<K, V, C>::value_type &value);
+
 template <typename K, typename V, typename C>
 class RadixNode {
 public:
@@ -29,13 +50,19 @@ public:
     const children_type& children() const;
     void setChild(const K &key, RadixNode *node);
 
-    static RadixNode<K, V, C>* ascend(RadixNode<K, V, C> *node);
-    static RadixNode<K, V, C>* descend(RadixNode<K, V, C> *node);
+    template <typename K_, typename V_, class C_>
+    friend RadixNode<K_, V_, C_>* ascend(RadixNode<K_, V_, C_> *node);
+    template <typename K_, typename V_, class C_>
+    friend RadixNode<K_, V_, C_>* descend(RadixNode<K_, V_, C_> *node);
 
-    static RadixNode<K, V, C>* begin(RadixNode<K, V, C> *node);
-    static RadixNode<K, V, C>* findNode(const K &key, RadixNode<K, V, C> *node, size_t depth);
-    static RadixNode<K, V, C>* append(RadixNode<K, V, C> *node, const value_type &value);
-    static RadixNode<K, V, C>* prepend(RadixNode<K, V, C> *node, const value_type &value);
+    template <typename K_, typename V_, class C_>
+    friend RadixNode<K_, V_, C_>* begin(RadixNode<K_, V_, C_> *node);
+    template <typename K_, typename V_, class C_>
+    friend RadixNode<K_, V_, C_>* findNode(const K_ &key, RadixNode<K_, V_, C_> *node, size_t depth);
+    template <typename K_, typename V_, class C_>
+    friend RadixNode<K_, V_, C_>* append(RadixNode<K_, V_, C_> *node, const typename RadixNode<K_, V_, C_>::value_type &value);
+    template <typename K_, typename V_, class C_>
+    friend RadixNode<K_, V_, C_>* prepend(RadixNode<K_, V_, C_> *node, const typename RadixNode<K_, V_, C_>::value_type &value);
 private:
     RadixNode(const RadixNode &) = delete;
     RadixNode& operator=(const RadixNode &) = delete;
@@ -95,13 +122,14 @@ auto RadixNode<K, V, C>::valuePtr() const -> value_type* {
 }
 
 template <typename K, typename V, class C>
-RadixNode<K, V, C>* RadixNode<K, V, C>::ascend(RadixNode<K, V, C> *node) {
+RadixNode<K, V, C>* ascend(RadixNode<K, V, C> *node) {
     if (node->mParent == nullptr) {
         return nullptr;
     }
     auto it = node->mParent->mChildren.find(node->mKey);
-    // TODO: rewrite!
-    assert(it != node->mParent->mChildren.end());
+    if (it == node->mParent->mChildren.end()) {
+        throw std::out_of_range("Calling method ascend with externall node");
+    }
     ++it;
     if (it == node->mParent->mChildren.end()) {
         return ascend(node->mParent);
@@ -111,28 +139,30 @@ RadixNode<K, V, C>* RadixNode<K, V, C>::ascend(RadixNode<K, V, C> *node) {
 
 }
 template <typename K, typename V, class C>
-RadixNode<K, V, C>* RadixNode<K, V, C>::descend(RadixNode<K, V, C> *node) {
+RadixNode<K, V, C>* descend(RadixNode<K, V, C> *node) {
     if (node->mIsLeaf) {
         return node;
     }
     auto it = node->mChildren.begin();
-    // TODO: rewrite!
-    assert(it != node->mChildren.end());
+    if (it == node->mChildren.end()) {
+        throw std::length_error("Node doesn't store any child");
+    }
     return descend(it->second);
 }
 
 template <typename K, typename V, class C>
-RadixNode<K, V, C>* RadixNode<K, V, C>::begin(RadixNode<K, V, C> *node) {
+RadixNode<K, V, C>* begin(RadixNode<K, V, C> *node) {
     if (node->mIsLeaf) {
         return node;
     }
-    //TODO: rewrite!
-    assert(!node->mChildren.empty());
+    if (node->mChildren.empty()) {
+        throw std::length_error("Node doesn't store any child");
+    }
     return begin(node->mChildren.begin()->second);
 }
 
 template <typename K, typename V, class C>
-RadixNode<K, V, C>* RadixNode<K, V, C>::findNode(const K &key, RadixNode<K, V, C> *node, size_t depth) {
+RadixNode<K, V, C>* findNode(const K &key, RadixNode<K, V, C> *node, size_t depth) {
     if (node->mChildren.empty()) {
         return node;
     }
@@ -159,7 +189,7 @@ RadixNode<K, V, C>* RadixNode<K, V, C>::findNode(const K &key, RadixNode<K, V, C
 }
 
 template <typename K, typename V, class C>
-RadixNode<K, V, C>* RadixNode<K, V, C>::append(RadixNode<K, V, C> *node, const value_type &value) {
+RadixNode<K, V, C>* append(RadixNode<K, V, C> *node, const typename RadixNode<K, V, C>::value_type &value) {
     auto defaultKey = radixSubstr(value.first, 0, 0);
     size_t depth = node->mDepth + radixSize(node->mKey);
     size_t size = radixSize(value.first) - depth;
@@ -177,7 +207,6 @@ RadixNode<K, V, C>* RadixNode<K, V, C>::append(RadixNode<K, V, C> *node, const v
     newNode->mKey = newKey;
     node->mChildren[newKey] = newNode;
 
-    // TODO: initializer list?
     auto newChildNode = new RadixNode<K, V, C>(value, node->mPredicate);
     newChildNode->mParent = newNode;
     newChildNode->mDepth = depth + size;
@@ -188,7 +217,7 @@ RadixNode<K, V, C>* RadixNode<K, V, C>::append(RadixNode<K, V, C> *node, const v
 }
 
 template <typename K, typename V, class C>
-RadixNode<K, V, C>* RadixNode<K, V, C>::prepend(RadixNode<K, V, C> *node, const value_type &value) {
+RadixNode<K, V, C>* prepend(RadixNode<K, V, C> *node, const typename RadixNode<K, V, C>::value_type &value) {
     size_t nodeSize = radixSize(node->mKey);
     size_t valueSize = radixSize(value.first) - node->mDepth;
     size_t count;
@@ -197,8 +226,9 @@ RadixNode<K, V, C>* RadixNode<K, V, C>::prepend(RadixNode<K, V, C> *node, const 
             break;
         }
     }
-    // TODO: exceptions
-    //assert(count != 0);
+    if (count == 0) {
+        throw std::logic_error("Trying to prepend inconsistant node");
+    }
     node->mParent->mChildren.erase(node->mKey);
     auto newParentNode = new RadixNode<K, V, C>(node->mPredicate);
     newParentNode->mParent = node->mParent;

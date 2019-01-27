@@ -60,7 +60,7 @@ auto RadixIter<K, V, C>::operator->() const -> value_type* {
 template <typename K, typename V, class C>
 const RadixIter<K, V, C>& RadixIter<K, V, C>::operator++() { // prefix
     if (mPointed != nullptr) {
-        mPointed = RadixNode<K, V, C>::ascend(mPointed);
+        mPointed = ascend(mPointed);
     }
     return *this;
 }

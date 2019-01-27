@@ -78,7 +78,7 @@ auto RadixTrie<K, V, C>::find(const K &key) -> iterator {
     if (mRoot == nullptr) {
         return iterator(nullptr);
     }
-    auto node = RadixNode<K, V, C>::findNode(key, mRoot, 0);
+    auto node = findNode(key, mRoot, 0);
     if (!node->isLeaf()) {
         return iterator(nullptr);
     }
@@ -90,7 +90,7 @@ auto RadixTrie<K, V, C>::begin() -> iterator {
     if (mRoot == nullptr || mSize == 0) {
         return iterator(nullptr);
     }
-    return iterator(RadixNode<K, V, C>::begin(mRoot));
+    return iterator(Patricia::begin(mRoot));
 }
 
 template <typename K, typename V, typename C>
@@ -105,20 +105,20 @@ auto RadixTrie<K, V, C>::insert(const value_type &value) -> std::pair<iterator, 
         mRoot = new RadixNode<K, V, C>(mPredicate);
         mRoot->setKey(defaultKey);
     }
-    auto node = RadixNode<K, V, C>::findNode(value.first, mRoot, 0);
+    auto node = findNode(value.first, mRoot, 0);
     if (node->isLeaf()) {
         return {node, false};
     } else if (node == mRoot) {
         ++mSize;
-        return {RadixNode<K, V, C>::append(mRoot, value), true};
+        return {append(mRoot, value), true};
     }
     ++mSize;
     int size = radixSize(node->key());
     auto childKey = radixSubstr(value.first, node->depth(), size);
     if (childKey == node->key()) {
-        return {RadixNode<K, V, C>::append(node, value), true};
+        return {append(node, value), true};
     }
-    return {RadixNode<K, V, C>::prepend(node, value), true};
+    return {prepend(node, value), true};
 }
 
 template <typename K, typename V, typename C>
@@ -127,7 +127,7 @@ bool RadixTrie<K, V, C>::erase(const K &key) {
         return false;
     }
     auto defaultKey = radixSubstr(key, 0, 0);
-    auto child = RadixNode<K, V, C>::findNode(key, mRoot, 0);
+    auto child = findNode(key, mRoot, 0);
     if (!child->isLeaf()) {
         return false;
     }
